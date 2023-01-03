@@ -16,12 +16,14 @@ def SubDocFileTransfer(file_names,foldername,targetfolder,downloads):
     mainfolder=os.path.join(targetfolder,foldername)
     if os.path.exists(mainfolder)==False:
         os.mkdir(mainfolder)
-        os.mkdir(os.path.join(mainfolder,"Sub_Agreements"))
+        if os.path.exists(os.path.join(mainfolder,"Sub_Agreements"))==False:
+            os.mkdir(os.path.join(mainfolder,"Sub_Agreements"))
     else:
-        os.mkdir(os.path.join(mainfolder,"Sub_Agreements"))
+        if os.path.exists(os.path.join(mainfolder,"Sub_Agreements"))==False:
+            os.mkdir(os.path.join(mainfolder,"Sub_Agreements"))
 
     '''______Create Versioning of the dupliacte files________'''
-    extenChange=lambda x:x.replace(".docx","").replace(".txt","").replace(".csv","").replace(".pdf","").replace(".xlsx","").replace(".py","")
+    extenChange=lambda x:x.replace(".docx","").replace(".txt","").replace(".csv","").replace(".pdf","").replace(".xlsx","").replace(".py","").replace(".doc","").replace(".html","").replace(".json","").replace("(","").replace(")","").replace(".docs","").replace(".xlsm","").replace(".PDF","")
     filenames=list(map(extenChange,file_names))
     if type(filenames) in ['str',str]:
         print(1111)
@@ -50,7 +52,7 @@ def SubDocFileTransfer(file_names,foldername,targetfolder,downloads):
                 subFileslist.append(dirfile)
     return  subFileslist
 #print(mainDocFileTransfer(file_names,sys.argv[1]))
-#Note:avoid spaces before and after aswell in the middle of the folder , whike creating  it instaed use underscore.
+#Note:avoid spaces before and after aswell in the middle of the folder , whike creating  it instead use underscore.
 
 
 
