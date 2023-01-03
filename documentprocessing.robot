@@ -28,6 +28,7 @@ Library           lib\\updatedate.py
 Library           lib\\SentSapMail.py
 Library           lib\\Directory_segragation.py
 Library           lib\\Collect_Download_details_in_Excel.py
+Library           lib\\Collect_All_Download_details_in_Excel.py
 
 *** Variables ***
 ${aeuser}         ${EMPTY}
@@ -217,7 +218,9 @@ IndividualValue
         ${MasterAgreementID}=    Get Text    //*[@class="queryResultTable"]/tbody/tr[${document}]/td[1]
         Set To Dictionary    ${File_Details_for_Each_Agreement_ID}    Master_Agreement_ID    ${MasterAgreementID}    #---------->New
         Set Global Variable    ${MasterAgreementID}
-        Click Element    //*[@class="queryResultTable"]/tbody/tr[${document}]/td[1]    #Click on the master Agreement ID
+        #Click Element    //*[@class="queryResultTable"]/tbody/tr[${document}]/td[1]    #Click on the master Agreement ID
+        ${nolink}=    Run Keyword And Return Status    Click Element    //*[@class="queryResultTable"]/tbody/tr[${document}]/td[1]/a
+        Run Keyword If    '${nolink}'!='True'    Click Element    //*[@class="queryResultTable"]/tbody/tr[${document}]/td[1]
         sleep    2s
         ${present}=    Run Keyword And Return Status    Element Should Be Visible    //*[@class="queryResultTable"]/tbody/tr[${document}]/td[1]
         Run Keyword If    (${present} == False)    Clickeachdoc
@@ -229,6 +232,7 @@ IndividualValue
     ${Entire_File_Details_str}=    Convert To String    ${Entire_File_Details}
     Append To File    ${Downloaded_Files_Details}    ${Entire_File_Details_str}
     ${Excel_download_details}=    Downloadfiles_Excel    ${Entire_File_Details}    ${summary_FilePath}
+    ${Excel_Alldownload_details}=    AllDownloadfiles_Excel    ${Entire_File_Details}    ${summary_FilePath}
 
 Clickeachdoc
     ${datacollection}=    Create List
@@ -237,19 +241,20 @@ Clickeachdoc
     sleep    6s
     Click Element    //*[@class="lsTbsLabelSelText"]    #Header
     sleep    3s
-    ${Effective_date}=    Get Text    //*[@tooltipref="fieldPrompt||effective_date"]/span    #Effective date
-    sleep    5s
-    ${Expiration_date}=    Get Text    //*[@tooltipref="fieldPrompt||expiration_date"]/span    #Expiration date
+    ${effective_date_check}=    Run Keyword And Return Status    Effective_date
+    Run Keyword If    '${effective_date_check}'=='False'    Effective_date_Replace
+    ${expiration_date_check}=    Run Keyword And Return Status    Expiration_date
+    Run Keyword If    '${expiration_date_check}'=='False'    Expiration_date_Replace
     Append To List    ${datacollection}    ${Effective_date}
     Append To List    ${datacollection}    ${Expiration_date}
     Click Element    //*[@class="lsTbsLabel lsTbsLabelUp"][@title="This tab contains supplier information"]    #supplierinformation
-    sleep    5s
+    sleep    3s
     ${SupplierName}=    Get Text    //*[@id="fieldLabel||vendor"][contains(text(),"Supplier")]/../following-sibling::div/a    #suppliername
     Set Global Variable    ${SupplierName}
     Append To List    ${datacollection}    ${SupplierName}
     sleep    2s
     Click Element    //*[@id="fieldLabel||vendor"][contains(text(),"Supplier")]/../following-sibling::div/a
-    sleep    5s
+    sleep    3s
     ${ExternalID}=    Get Text    //*[@class="standardField field"][@tooltipref="fieldPrompt||external_id"]/span    #externalid
     Set Global Variable    ${ExternalID}
     Append To List    ${datacollection}    ${ExternalID}
@@ -270,6 +275,22 @@ Clickeachdoc
     Run Keyword If    (${con_present} == False)    Commence Sub Agreement Download    #Click    //*[@class="queryButton queryButtonImage"][@alt="Back"]
     Run Keyword If    (${con_present} == True)    Jumping To Contract Document Download Part
 
+Effective_date
+    ${Effective_date}=    Get Text    //*[@tooltipref="fieldPrompt||effective_date"]/span    #Effective date
+    Set Global Variable    ${Effective_date}
+
+Expiration_date
+    ${Expiration_date}=    Get Text    //*[@tooltipref="fieldPrompt||expiration_date"]/span    #Expiration date
+    Set Global Variable    ${Expiration_date}
+
+Effective_date_Replace
+    ${Effective_date}=    Catenate    Date    Absent
+    Set Global Variable    ${Effective_date}
+
+Expiration_date_Replace
+    ${Expiration_date}=    Catenate    Date    Absent
+    Set Global Variable    ${Expiration_date}
+
 Jumping To Contract Document Download Part
     sleep    2s
     ${tablenum_unordered}=    Get Text    //*[@class="documentToolbarText"][2]
@@ -285,7 +306,7 @@ Jumping To Contract Document Download Part
         DownloadMasterDocuments
     END
     #_____Main File Transfer(MasterDocument)__________
-    sleep    15s
+    sleep    12s
     ${MasterDocDownloaded}=    mainDocFileTransfer    ${MaindocNames}    ${FolderName}    ${targetfolder}    ${downloads}
     #**************************_____Downloading Sub Agreements______*****************************
     sleep    3s
@@ -321,68 +342,60 @@ Move To Sub Documents download part
         IterateSubDocuments
     END
     #_____Sub File Transfer(SubDocument)__________
-    sleep    15s
+    sleep    12s
     ${SubDocDownloaded}=    SubDocFileTransfer    ${Subofsub_docNames}    ${FolderName}    ${targetfolder}    ${downloads}
     sleep    2s
     Click Element    //*[@class="queryButton queryButtonImage"][@alt="Back"]
 
 DownloadMasterDocuments
     #______Get number of rows in a table(MasterDocument)_____
-    ${rowcount_div}=    Get Element Count    //table[@id="tcontract_documents75edfadc12002"]/tbody/tr    #Get count of rows in a table
+    ${rowcount_div}=    Get Element Count    //*[@class="genericCollectionTable"]/table/tbody/tr    #Get count of rows in a table
     Set Global Variable    ${rowcount_div}
-    ${Evenlist}=    Create List
-    FOR    ${contdoc}    IN RANGE    1    ${rowcount_div}+1
-        Run Keyword If    ${${contdoc}%2} == 0    Append To List    ${Evenlist}    ${contdoc}
-    END
-    Set Global Variable    ${Evenlist}
-    GetOnlyEven
-
-GetOnlyEven
     ${MaindocNames}=    Create List
-    FOR    ${evennum}    IN    @{Evenlist}
-        ${MainFile}=    Get Text    //*[@class="genericCollectionTable"]/table/tbody/tr[${evennum}]/td[5]/div/a
-        Append To List    ${MaindocNames}    ${MainFile}
-        Run Keyword If    ${${evennum}%2} == 0    Click Element    //*[@class="genericCollectionTable"]/table/tbody/tr[${evennum}]/td[5]/div/a
+    Set Global variable    ${MaindocNames}
+    FOR    ${contdoc}    IN RANGE    1    ${rowcount_div}+1
+        Set Global Variable    ${contdoc}
+        ${get_name_contr_doc}=    Run Keyword And Return Status    Contract_Document_Downloading
+        Run Keyword If    '${get_name_contr_doc}'=='True'    Append To List    ${MaindocNames}    ${MainFile}
+        ${downloadcontr_doc}=    Run Keyword And Return Status    Click Element    //*[@class="genericCollectionTable"]/table/tbody/tr[${contdoc}]/td[5]
     END
-    Set Global Variable    ${MaindocNames}
-    Set To Dictionary    ${File_Details_for_Each_Agreement_ID}    Master_Agreements    ${MaindocNames}    #---------->New
+    Set To Dictionary    ${File_Details_for_Each_Agreement_ID}    Master_Agreements    ${MaindocNames}
+
+Contract_Document_Downloading
+    ${MainFile}=    Get Text    //*[@class="genericCollectionTable"]/table/tbody/tr[${contdoc}]/td[5]
+    Set Global Variable    ${MainFile}
 
 IterateSubDocuments
     #______Get number of rows in a table(MasterDocument)_____
-    ${sub_rowcount}=    Get Element Count    //table[@id="tagreements538090611003"]/tbody/tr    #Get count of rows in a table
+    ${sub_rowcount}=    Get Element Count    //*[@class="genericCollectionTable"]/table/tbody/tr    #Get count of rows in a table
     Set Global Variable    ${sub_rowcount}
-    ${subEvenlist}=    Create List
-    FOR    ${subcontdoc}    IN RANGE    1    ${sub_rowcount}+1
-        Run Keyword If    ${${subcontdoc}%2} == 0    Append To List    ${subEvenlist}    ${subcontdoc}
-    END
-    Set Global Variable    ${subEvenlist}
-    SubDocGetOnlyEven
-
-SubDocGetOnlyEven
     ${SubdocNames}=    Create List
-    ${Entire_Subdocuments_Names}=    Create List    #-------------------------->New
+    ${Entire_Subdocuments_Names}=    Create List
     Set Global Variable    ${Entire_Subdocuments_Names}
-    FOR    ${subevennum}    IN    @{subEvenlist}
-        ${Files_in_each_sub_agreement}=    Create List
-        Set Global Variable    ${Files_in_each_sub_agreement}
-        Set Global Variable    ${subevennum}
-        Run Keyword If    ${${subevennum}%2} == 0    Clicks Sub Agreement Title    #---------------->New
-        sleep    5s
-        Click Element    //*[@class="lsTbsLabelText"][contains(text(),"Contract Documents")]    #contract documents
-        GetSubDocuments_in_SubAgreements
-        sleep    2s
-        Append To List    ${Entire_Subdocuments_Names}    ${Each_Sub_Agreement}
+    Set Global Variable    ${SubdocNames}
+    FOR    ${subcontdoc}    IN RANGE    1    ${sub_rowcount}+1
+        Set Global Variable    ${subcontdoc}
+        ${Sub_Title_Presence}=    Run Keyword And Return Status    Sub_Doc_Title_Presence
+        Run Keyword If    '${Sub_Title_Presence}'=='True'    Work On SubDoc Title
     END
-    Set To Dictionary    ${File_Details_for_Each_Agreement_ID}    Sub_Document Details    ${Entire_Subdocuments_Names}    #------------->New
+    Set To Dictionary    ${File_Details_for_Each_Agreement_ID}    Sub_Document Details    ${Entire_Subdocuments_Names}
 
-Clicks Sub Agreement Title
-    #-------------------->New
+Sub_Doc_Title_Presence
+    ${subAgreement_Title}=    Get Text    //*[@class="genericCollectionTable"]/table/tbody/tr[${subcontdoc}]/td[2]
+    Set Global Variable    ${subAgreement_Title}
+
+Work On SubDoc Title
+    ${Files_in_each_sub_agreement}=    Create List
+    Set Global Variable    ${Files_in_each_sub_agreement}
     ${Each_Sub_Agreement}=    Create Dictionary
     Set Global variable    ${Each_Sub_Agreement}
-    ${subAgreement_Title}=    Get Text    //table[@id="tagreements538090611003"]/tbody/tr[${subevennum}]/td[1]    #---------->New
-    Set To Dictionary    ${Each_Sub_Agreement}    ${subAgreement_Title}    Empty    #----------->>>>>>>Tryyyy
-    Set Global Variable    ${subAgreement_Title}
-    Click Element    //table[@id="tagreements538090611003"]/tbody/tr[${subevennum}]/td[2]
+    Set To Dictionary    ${Each_Sub_Agreement}    ${subAgreement_Title}    Empty
+    ${Click_Sub_Doc_Title}=    Run Keyword and Return Status    Click Element    //*[@class="genericCollectionTable"]/table/tbody/tr[${subcontdoc}]/td[2]
+    sleep    5s
+    Click Element    //*[@class="lsTbsLabelText"][contains(text(),"Contract Documents")]    #contract documents
+    GetSubDocuments_in_SubAgreements
+    sleep    2s
+    Append To List    ${Entire_Subdocuments_Names}    ${Each_Sub_Agreement}
 
 GetSubDocuments_in_SubAgreements
     #__________Get number of contract document tables(Subof_SubDocument)__________________
@@ -410,34 +423,35 @@ Inspecting Element and click element
 
 DownloadSubDocuments_of_SubAgreements
     #______Get number of rows in a table(MasterDocument)_____
-    ${subofsub_rowcount}=    Get Element Count    //table[@id="tcontract_documents7f490ca812002"]/tbody/tr    #Get count of rows in a table
+    ${subofsub_rowcount}=    Get Element Count    //*[@class="genericCollectionTable"]/table/tbody/tr    #Get count of rows in a table
     Set Global Variable    ${subofsub_rowcount}
     ${subof_subEvenlist}=    Create List
     FOR    ${subof_subcontdoc}    IN RANGE    1    ${subofsub_rowcount}+1
-        Run Keyword If    ${${subof_subcontdoc}%2} == 0    Append To List    ${subof_subEvenlist}    ${subof_subcontdoc}
-    END
-    Set Global Variable    ${subof_subEvenlist}
-    Subdoc_of_SubAgreements_GetOnlyEven
-
-Subdoc_of_SubAgreements_GetOnlyEven
-    FOR    ${subofsubevennum}    IN    @{subof_subEvenlist}
-        ${subof_subFile}=    Get Text    //table[@id="tcontract_documents7f490ca812002"]/tbody/tr[${subofsubevennum}]/td[5]/div/a
-        Append To List    ${Subofsub_docNames}    ${subof_subFile}
-        Append To List    ${Files_in_each_sub_agreement}    ${subof_subFile}
-        sleep    4s
-        Run Keyword If    ${${subofsubevennum}%2} == 0    Click Element    //table[@id="tcontract_documents7f490ca812002"]/tbody/tr[${subofsubevennum}]/td[5]
+        Set Global Variable    ${subof_subcontdoc}
+        ${Check_File_In_Sub_Agg}=    Run Keyword And Return Status    Look For Sub Agg File
+        Run Keyword If    '${Check_File_In_Sub_Agg}'=='True'    Click and Download Sub File
     END
     Set To Dictionary    ${Each_Sub_Agreement}    ${subAgreement_Title}    ${Files_in_each_sub_agreement}
     sleep    3s
     Click Element    //*[@class="queryButton queryButtonImage"][@alt="Back"]
     sleep    4s
 
+Look For Sub Agg File
+    ${subof_subFile}=    Get Text    //*[@class="genericCollectionTable"]/table/tbody/tr[${subof_subcontdoc}]/td[5]
+    Set Global Variable    ${subof_subFile}
+
+Click and Download Sub File
+    Append To List    ${Subofsub_docNames}    ${subof_subFile}
+    Append To List    ${Files_in_each_sub_agreement}    ${subof_subFile}
+    sleep    4s
+    ${Clicking_sub_file}=    Run Keyword And Return Status    Click Element    //*[@class="genericCollectionTable"]/table/tbody/tr[${subof_subcontdoc}]/td[5]
+
 ContinueFlow
     Continue For Loop
 
 UploadDirectories
     #_____________Get FolderPath_________________________#
-    sleep    5s
+    sleep    3s
     Close All Browsers
     sleep    3s
     ${Folders_list_}=    Create List
